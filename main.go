@@ -1,74 +1,69 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
 
 	"github.com/ngfalabella/social-network/models"
 )
 
-func main() {
-	fmt.Println("Inicio de programa")
+type Product struct {
+	ID     int    `json:"id"`
+	Nombre string `json:"nombre"`
+	Precio int    `json:"precio"`
+	Costo  int    `json:"-"`
+}
 
-	usuarioUno := models.User{ID: 1, Nombre: "Juan", Email: "Juan@gmail.com", Password: "123"}
-	usuarioDos := models.User{ID: 2, Nombre: "Pedro", Email: "Pedro@gmail.com", Password: "456"}
+const PORT int = 3030
 
-	var listaDeUsuarios []models.User
+var ListadoDeProductos = []Product{}
+var ListadoDeComentarios = []models.Coment{}
 
-	listaDeUsuarios = append(listaDeUsuarios, usuarioUno, usuarioDos)
+func HandleHome(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		fmt.Fprint(w, "Bienvenido a la Tienda de la Red Social")
+	}
+	fmt.Fprint(w, "No se encontro ruta")
+}
 
-	fmt.Printf("Usuarios Cargados hasta el momento : %d \n", len(listaDeUsuarios))
+func HandleProducts(w http.ResponseWriter, r *http.Request) {
 
-	fmt.Println(listaDeUsuarios)
-
-	fmt.Println("Cargando el proximo usuario")
-
-	usuarioTres := models.User{ID: 3, Nombre: "Marcos", Email: "Marcos@gmail.com", Password: "789"}
-
-	err := models.ValidateUser(usuarioTres)
-
-	if err != nil {
-		fmt.Println("Error encontrado ", err)
+	if r.Method != http.MethodGet {
+		http.Error(w, "Metodo no permitido", http.StatusMethodNotAllowed)
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(ListadoDeProductos)
+}
 
-	listaDeUsuarios = append(listaDeUsuarios, usuarioTres)
-
-	fmt.Println("Usuario cargado con exito")
-
-	PrintUserReport(listaDeUsuarios)
-
-	var feed []models.Post
-
-	publicacionUno := models.Post{ID: 1, Autor: "Marcos", Contenido: "Programando en Go desde cero!"}
-	publicacionDos := models.Post{ID: 2, Autor: "Marcos", Contenido: "Segundo post en Go"}
-	publicacionTres := models.Post{ID: 3, Autor: "Marcos", Contenido: "Fin del dia!"}
-
-	errDos := models.ValidatePost(publicacionUno)
-	errTres := models.ValidatePost(publicacionDos)
-	errCuatro := models.ValidatePost(publicacionTres)
-
-	if errDos != nil {
-		fmt.Println("Nuevo error : ", errDos)
+func HandleComents(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Metodo no permitido", http.StatusMethodNotAllowed)
+		return
 	}
-	if errTres != nil {
-		fmt.Println("Nuevo error : ", errTres)
-	}
-	if errCuatro != nil {
-		fmt.Println("Nuevo error : ", errCuatro)
-	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(ListadoDeComentarios)
+}
 
-	feed = append(feed, publicacionUno, publicacionDos, publicacionTres)
+func init() {
+	productoUno := Product{ID: 1, Nombre: "Celular", Precio: 1000000, Costo: 750000}
+	productoDos := Product{ID: 2, Nombre: "Notebook", Precio: 1250000, Costo: 800000}
+	comentarioUno := models.Coment{ID: 123, Texto: "Muy buena publicacion", IPUsuario: "UD-789"}
 
-	fmt.Println(feed)
+	ListadoDeProductos = append(ListadoDeProductos, productoUno, productoDos)
+	ListadoDeComentarios = append(ListadoDeComentarios, comentarioUno)
 
 }
 
-func PrintUserReport(lista []models.User) {
-	for _, elemento := range lista {
-		fmt.Println("--- Perfil de Usuario ---")
-		fmt.Printf("ID : %d \n", elemento.ID)
-		fmt.Printf("Nombre : %s \n", elemento.Nombre)
-		fmt.Printf("Email : %s \n", elemento.Email)
-		fmt.Println("-------------------------")
-	}
+func main() {
+	addr := fmt.Sprintf(":%d", PORT)
+
+	http.HandleFunc("/", HandleHome)
+	http.HandleFunc("/api/products", HandleProducts)
+	http.HandleFunc("/api/coments", HandleComents)
+
+	fmt.Println("Servidor corriendo en Puerto : ", PORT)
+	http.ListenAndServe(addr, nil)
+
 }
