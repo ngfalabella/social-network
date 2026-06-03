@@ -8,62 +8,52 @@ import (
 	"github.com/ngfalabella/social-network/models"
 )
 
-type Product struct {
-	ID     int    `json:"id"`
-	Nombre string `json:"nombre"`
-	Precio int    `json:"precio"`
-	Costo  int    `json:"-"`
-}
+const PORT = 7070
 
-const PORT int = 3030
+var ListadoDePost = []models.Post{}
 
-var ListadoDeProductos = []Product{}
-var ListadoDeComentarios = []models.Coment{}
-
-func HandleHome(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodGet {
-		fmt.Fprint(w, "Bienvenido a la Tienda de la Red Social")
-	}
-	fmt.Fprint(w, "No se encontro ruta")
-}
-
-func HandleProducts(w http.ResponseWriter, r *http.Request) {
-
+func HandlerPost(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Metodo no permitido", http.StatusMethodNotAllowed)
+		http.Error(w, "Metodo no validado", http.StatusMethodNotAllowed)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(ListadoDeProductos)
+	json.NewEncoder(w).Encode(ListadoDePost)
 }
 
-func HandleComents(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Metodo no permitido", http.StatusMethodNotAllowed)
+func CrearPostHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Metodo no validado", http.StatusMethodNotAllowed)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(ListadoDeComentarios)
+	var postCreado models.Post
+
+	err := json.NewDecoder(r.Body).Decode(&postCreado)
+	if err != nil {
+		http.Error(w, "Error al leer datos", http.StatusBadRequest)
+		return
+	}
+
+	ListadoDePost = append(ListadoDePost, postCreado)
+
+	w.WriteHeader(http.StatusCreated)
+	fmt.Println("Post creado ")
 }
 
 func init() {
-	productoUno := Product{ID: 1, Nombre: "Celular", Precio: 1000000, Costo: 750000}
-	productoDos := Product{ID: 2, Nombre: "Notebook", Precio: 1250000, Costo: 800000}
-	comentarioUno := models.Coment{ID: 123, Texto: "Muy buena publicacion", IPUsuario: "UD-789"}
 
-	ListadoDeProductos = append(ListadoDeProductos, productoUno, productoDos)
-	ListadoDeComentarios = append(ListadoDeComentarios, comentarioUno)
+	postUno := models.Post{ID: 222, Autor: "Adrian", Contenido: "Me fui de vacaciones", Likes: 77, IpCreador: "199.199.180.1"}
 
+	ListadoDePost = append(ListadoDePost, postUno)
 }
 
 func main() {
 	addr := fmt.Sprintf(":%d", PORT)
 
-	http.HandleFunc("/", HandleHome)
-	http.HandleFunc("/api/products", HandleProducts)
-	http.HandleFunc("/api/coments", HandleComents)
+	http.HandleFunc("/api/posts/obtener", HandlerPost)
+	http.HandleFunc("/api/posts/crear", CrearPostHandler)
 
-	fmt.Println("Servidor corriendo en Puerto : ", PORT)
+	fmt.Printf("Red Social activa en http://localhost:%d", PORT)
+
 	http.ListenAndServe(addr, nil)
-
 }
